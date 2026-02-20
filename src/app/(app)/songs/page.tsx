@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server';
 import { SongListClient } from '@/components/songs/SongListClient';
+import { CreateSongButton } from '@/components/songs/SongActions';
 import type { SongListItem } from '@/types/database';
 
 export const metadata = {
@@ -16,7 +17,10 @@ export default async function SongsPage() {
 
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-4">
-      <h1 className="text-2xl font-bold">Songs</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Songs</h1>
+        <CreateSongButton />
+      </div>
       <SongListClient songs={(songs ?? []) as SongListItem[]} />
     </main>
   );

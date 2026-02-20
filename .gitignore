@@ -58,6 +58,8 @@ supabase/.temp/
 # claude code – keep docs/, ignore everything else
 .claude/*
 !.claude/docs/
+!.claude/agents/
+!.claude/skills/
 
 # project instructions (local only, not in repo)
 claude.md

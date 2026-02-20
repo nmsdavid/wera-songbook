@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { createServerClient } from '@/lib/supabase/server';
 import { SongDetailHeader } from '@/components/songs/SongDetailHeader';
 import { ChordSheet } from '@/components/chord-sheet/ChordSheet';
+import { SongEditButton } from '@/components/songs/SongActions';
 import type { Song } from '@/types/database';
 
 interface SongDetailPageProps {
@@ -53,7 +54,10 @@ export default async function SongDetailPage({ params }: SongDetailPageProps) {
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-4">
-      <SongDetailHeader song={song} />
+      <div className="flex items-start justify-between gap-4">
+        <SongDetailHeader song={song} />
+        <SongEditButton songId={song.id} />
+      </div>
       <ChordSheet content={song.content} originalKey={song.original_key} />
     </main>
   );
