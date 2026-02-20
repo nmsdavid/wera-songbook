@@ -1,12 +1,16 @@
+import { getSetlistsForList } from '@/lib/setlists/actions';
+import { SetlistListClient } from '@/components/setlist/SetlistListClient';
+
 export const metadata = {
   title: 'Setlists – Songbook',
 };
 
-export default function SetlistsPage() {
+export default async function SetlistsPage() {
+  const setlists = await getSetlistsForList();
+
   return (
-    <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-2xl font-bold">Setlists</h1>
-      <p className="text-muted-foreground">Demnächst verfügbar</p>
-    </div>
+    <main className="mx-auto max-w-2xl space-y-4 p-4">
+      <SetlistListClient setlists={setlists} />
+    </main>
   );
 }

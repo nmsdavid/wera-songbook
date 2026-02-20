@@ -60,6 +60,7 @@ supabase/.temp/
 !.claude/docs/
 !.claude/agents/
 !.claude/skills/
+!.claude/rules/
 
 # project instructions (local only, not in repo)
 claude.md
