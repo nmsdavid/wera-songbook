@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files – keep .env.example for onboarding
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,5 +40,26 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.env.local
-.env.supabase
+
+# secrets & credentials
+*.key
+*.p12
+*.pfx
+*.crt
+*.cert
+credentials.json
+service-account*.json
+*secret*
+!src/**
+
+# supabase local
+supabase/.temp/
+
+# claude code – keep docs/, ignore everything else
+.claude/*
+!.claude/docs/
+
+# project instructions (local only, not in repo)
+claude.md
+CLAUDE.md
+PRD.md
