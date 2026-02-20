@@ -288,6 +288,12 @@ export type SetlistSong = Database['public']['Tables']['setlist_songs']['Row'];
 export type UserPreferences = Database['public']['Tables']['user_preferences']['Row'];
 export type PushSubscription = Database['public']['Tables']['push_subscriptions']['Row'];
 
+// Lightweight song type for list views (excludes content and version)
+export type SongListItem = Pick<
+  Song,
+  'id' | 'org_id' | 'department_id' | 'title' | 'artist' | 'original_key' | 'tempo' | 'category' | 'tags' | 'created_at' | 'updated_at'
+>;
+
 // JWT app_metadata shape (from custom access token hook)
 export type AppMetadata = {
   org_id: string | null;
