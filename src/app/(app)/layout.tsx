@@ -1,9 +1,12 @@
 'use client';
 
+import { useEffect } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BottomNav } from '@/components/layout/bottom-nav';
+import { OfflineBanner } from '@/components/layout/offline-banner';
 import { useUserRole } from '@/hooks/use-user-role';
+import { syncUpcomingSetlists } from '@/lib/offline/sync';
 
 export default function AppLayout({
   children,
@@ -11,6 +14,12 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const { user, role, isAdmin, loading } = useUserRole();
+
+  useEffect(() => {
+    if (!loading && user) {
+      syncUpcomingSetlists();
+    }
+  }, [loading, user]);
 
   if (loading) {
     return (
@@ -22,6 +31,7 @@ export default function AppLayout({
 
   return (
     <div className="min-h-svh bg-background">
+      <OfflineBanner />
       <AppHeader user={user} role={role} isAdmin={isAdmin} />
 
       <div className="flex">

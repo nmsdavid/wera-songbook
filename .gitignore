@@ -41,6 +41,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# serwist service worker (generated at build time)
+public/sw.js
+public/sw.js.map
+public/serwist-*.js
+public/serwist-*.js.map
+
 # secrets & credentials
 *.key
 *.p12
