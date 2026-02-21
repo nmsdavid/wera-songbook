@@ -2,17 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
+import { getUserMembership } from '@/lib/supabase/auth-helpers';
+import type { ActionResult } from '@/lib/actions/types';
 import type { Song, SongCategory } from '@/types/database';
 
 // ----- Types -----
-
-type ActionSuccess<T = undefined> = T extends undefined
-  ? { success: true }
-  : { success: true; data: T };
-
-type ActionError = { success: false; error: string };
-
-type ActionResult<T = undefined> = ActionSuccess<T> | ActionError;
 
 export type SongFormData = {
   title: string;
@@ -45,24 +39,13 @@ export async function createSong(
   if (validationError) return { success: false, error: validationError };
 
   const supabase = await createServerClient();
-
-  // Get current user's org_id from membership
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Nicht angemeldet.' };
-
-  const { data: membership } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .limit(1) as { data: Array<{ org_id: string }> | null };
-
-  const orgId = membership?.[0]?.org_id;
-  if (!orgId) return { success: false, error: 'Keine Organisation zugewiesen.' };
+  const membership = await getUserMembership(supabase);
+  if (!membership) return { success: false, error: 'Nicht angemeldet.' };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = (await (supabase.from('songs') as any)
     .insert({
-      org_id: orgId,
+      org_id: membership.orgId,
       department_id: formData.department_id,
       title: formData.title.trim(),
       artist: formData.artist?.trim() || null,
@@ -71,8 +54,8 @@ export async function createSong(
       category: formData.category,
       tags: formData.tags,
       content: formData.content,
-      created_by: user.id,
-      updated_by: user.id,
+      created_by: membership.userId,
+      updated_by: membership.userId,
     })
     .select('id')
     .single()) as { data: { id: string } | null; error: { message: string; code: string } | null };
@@ -120,7 +103,6 @@ export async function updateSong(
     .single()) as { data: { version: number } | null; error: { message: string; code: string } | null };
 
   if (error) {
-    // If no rows matched, it's a version conflict
     if (error.code === 'PGRST116') {
       return { success: false, error: 'CONFLICT' };
     }

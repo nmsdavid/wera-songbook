@@ -2,17 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
+import { getUserMembership } from '@/lib/supabase/auth-helpers';
+import type { ActionResult } from '@/lib/actions/types';
 import type { EventType, Setlist } from '@/types/database';
 
 // ----- Types -----
-
-type ActionSuccess<T = undefined> = T extends undefined
-  ? { success: true }
-  : { success: true; data: T };
-
-type ActionError = { success: false; error: string };
-
-type ActionResult<T = undefined> = ActionSuccess<T> | ActionError;
 
 export type SetlistFormData = {
   title: string;
@@ -26,7 +20,6 @@ export type SetlistSongEntry = {
   note: string | null;
 };
 
-// Joined type for setlist detail queries
 export type SetlistSongWithDetails = {
   id: string;
   setlist_id: string;
@@ -45,20 +38,6 @@ export type SetlistSongWithDetails = {
 };
 
 // ----- Helpers -----
-
-async function getUserMembership(supabase: Awaited<ReturnType<typeof createServerClient>>) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: membership } = await supabase
-    .from('org_members')
-    .select('org_id, department_id, role')
-    .eq('user_id', user.id)
-    .limit(1) as { data: Array<{ org_id: string; department_id: string; role: string }> | null };
-
-  if (!membership?.[0]) return null;
-  return { user, ...membership[0] };
-}
 
 function validateSetlistForm(data: SetlistFormData): string | null {
   if (!data.title.trim()) return 'Titel darf nicht leer sein.';
@@ -81,12 +60,12 @@ export async function createSetlist(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = (await (supabase.from('setlists') as any)
     .insert({
-      org_id: membership.org_id,
-      department_id: membership.department_id,
+      org_id: membership.orgId,
+      department_id: membership.departmentId,
       title: formData.title.trim(),
       date: formData.date,
       event_type: formData.event_type,
-      created_by: membership.user.id,
+      created_by: membership.userId,
     })
     .select('id')
     .single()) as { data: { id: string } | null; error: { message: string; code: string } | null };
@@ -171,7 +150,6 @@ export async function updateSetlistSongs(
 ): Promise<ActionResult> {
   const supabase = await createServerClient();
 
-  // Delete existing songs for this setlist
   const { error: deleteError } = await supabase
     .from('setlist_songs')
     .delete()
@@ -182,7 +160,6 @@ export async function updateSetlistSongs(
     return { success: false, error: 'Songs konnten nicht aktualisiert werden.' };
   }
 
-  // Insert new songs if any
   if (songs.length > 0) {
     const rows = songs.map((s) => ({
       setlist_id: setlistId,
@@ -227,7 +204,6 @@ export async function getSetlistWithSongs(setlistId: string) {
 
   if (!setlist) return null;
 
-  // Fetch songs with joined song details
   const { data: setlistSongs } = await supabase
     .from('setlist_songs')
     .select('id, setlist_id, song_id, position, note, song:songs(id, title, artist, original_key, tempo, content, category)')

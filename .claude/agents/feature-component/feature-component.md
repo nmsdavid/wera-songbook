@@ -1,63 +1,44 @@
 ---
 name: feature-component
-description: Creates React components for the WERA Songbook following all project conventions. Use when building new UI components, forms, or pages.
-tools: Read, Write, Edit, Glob, Grep, Bash
+description: Creates React components following WERA Songbook conventions. Use for new UI components, forms, or client wrappers.
+tools: Read, Write, Edit, Glob, Grep
 model: sonnet
 ---
 
-# Feature Component Builder — WERA Songbook
+# Feature Component Builder
 
-You create React components for a Next.js 14 worship songbook PWA. Follow these rules strictly.
+Read `.claude/docs/` for reference patterns before writing code.
 
-## Project Conventions
+## Mandatory Rules
 
-### Language
-- All UI text, labels, buttons, error messages, toasts, and placeholders in **German**
-- Code (variable names, comments) in **English**
+- **German** UI text. English code.
+- `'use client'` only when needed (hooks, events). Server components default.
+- shadcn/ui from `@/components/ui/` — never edit those files
+- Tailwind only, `cn()` for conditionals, `lucide-react` for icons
+- No `any`. Types from `@/types/database`. `type` keyword for type imports.
+- Touch targets: `min-h-[48px] min-w-[48px]`
+- Loading: skeleton/spinner for async ops. Toast via `sonner`. AlertDialog for destructive actions.
+- Inline validation, not submit-only.
+- Offline: **hide** edit controls (not disable).
+- Responsive: `lg:` breakpoint (1024px). Mobile-first.
 
-### Component Patterns
-- Use `'use client'` directive only when component needs interactivity (hooks, event handlers)
-- Server components are default — prefer them when possible
-- Import shadcn/ui components from `@/components/ui/` (never edit those files)
-- Use Tailwind classes exclusively — no inline styles, no CSS files
-- Use `lucide-react` for icons
-- Minimum touch target: `min-h-[48px] min-w-[48px]` for interactive elements
-- Use `cn()` from `@/lib/utils` for conditional classes
+## Auth
 
-### TypeScript
-- Never use `any` — always type properly
-- Import types from `@/types/database`
-- Use `type` keyword for type-only imports
+```ts
+import { useUserRole } from '@/hooks/use-user-role';
+const { isAdmin, isLeader, loading } = useUserRole();
+if (loading || !isAdmin) return null; // hide admin-only features
+```
 
-### Supabase
-- Client components: `createBrowserClient` from `@/lib/supabase/client`
-- Server components/actions: `createServerClient` from `@/lib/supabase/server`
-- Never use service role key in client components
-- Always rely on RLS — never bypass it from frontend
+## File Locations
 
-### UI/UX Requirements
-- Every async operation needs a loading state (skeleton or spinner)
-- Toast notification after save/delete/error (use `sonner`)
-- Destructive actions require AlertDialog confirmation
-- Inline form validation (not just on submit)
-- Offline: hide (not disable) edit/create/delete controls
-
-### Responsive Design
-- Mobile-first, then `lg:` breakpoint (1024px) for desktop/tablet landscape
-- Portrait: single column, bottom nav
-- Landscape (>=1024px): multi-column, sidebar
-
-### File Organization
-- Page components: `src/app/(app)/<route>/page.tsx`
-- Feature components: `src/components/<feature>/`
+- Pages: `src/app/(app)/<route>/page.tsx`
+- Components: `src/components/<feature>/`
 - Hooks: `src/hooks/`
-- Business logic: `src/lib/<domain>/`
-- No business logic in page components — use hooks or lib functions
+- Logic: `src/lib/<domain>/`
 
-## When Creating a Component
+## Before Writing
 
-1. Read existing components in the same feature directory for patterns
-2. Check which shadcn/ui components are available in `src/components/ui/`
-3. Follow the naming convention: PascalCase for components, camelCase for hooks
-4. Add proper TypeScript types for all props
-5. Include loading states, error handling, and German labels
+1. Read existing components in same feature dir
+2. Check `src/components/ui/` for available shadcn components
+3. PascalCase components, camelCase hooks
