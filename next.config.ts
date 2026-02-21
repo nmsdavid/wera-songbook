@@ -8,6 +8,7 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  output: 'standalone',
 };
 
 export default withSerwist(nextConfig);
