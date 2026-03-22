@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { createServerClient } from '@/lib/supabase/server';
+import { getUserMembership } from '@/lib/supabase/auth-helpers';
 import { getSongForEdit } from '@/lib/songs/actions';
 import { SongEditorForm } from '@/components/songs/SongEditorForm';
 
@@ -17,6 +20,10 @@ export async function generateMetadata({ params }: EditSongPageProps): Promise<M
 }
 
 export default async function EditSongPage({ params }: EditSongPageProps) {
+  const supabase = await createServerClient();
+  const membership = await getUserMembership(supabase);
+  if (!membership || membership.role !== 'admin') redirect('/songs');
+
   const { id } = await params;
   const song = await getSongForEdit(id);
 

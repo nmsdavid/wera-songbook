@@ -56,7 +56,7 @@ export async function getUsers(): Promise<ActionResult<{ users: UserWithMembersh
   };
 
   if (membersError || !members) {
-    console.error('getUsers members:', membersError);
+    console.error('getUsers members failed');
     return { success: false, error: 'Nutzer konnten nicht geladen werden.' };
   }
 
@@ -105,8 +105,12 @@ export async function createUser(input: CreateUserInput): Promise<ActionResult<{
     return { success: false, error: 'Bitte alle Pflichtfelder ausfüllen.' };
   }
 
-  if (input.password.length < 6) {
-    return { success: false, error: 'Passwort muss mindestens 6 Zeichen lang sein.' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+    return { success: false, error: 'Bitte eine gültige E-Mail-Adresse eingeben.' };
+  }
+
+  if (input.password.length < 8) {
+    return { success: false, error: 'Passwort muss mindestens 8 Zeichen lang sein.' };
   }
 
   const serviceClient = await createServiceRoleClient();
@@ -120,7 +124,7 @@ export async function createUser(input: CreateUserInput): Promise<ActionResult<{
   });
 
   if (authError || !authData.user) {
-    console.error('createUser auth:', authError);
+    console.error('createUser auth failed');
     if (authError?.message?.includes('already')) {
       return { success: false, error: 'Ein Nutzer mit dieser E-Mail existiert bereits.' };
     }
@@ -138,7 +142,7 @@ export async function createUser(input: CreateUserInput): Promise<ActionResult<{
     })) as { error: { message: string } | null };
 
   if (memberError) {
-    console.error('createUser membership:', memberError);
+    console.error('createUser membership failed');
     // Clean up: delete the auth user
     await serviceClient.auth.admin.deleteUser(authData.user.id);
     return { success: false, error: 'Mitgliedschaft konnte nicht erstellt werden.' };
@@ -167,7 +171,7 @@ export async function updateUserRole(
     .eq('org_id', ctx.membership.orgId)) as { error: { message: string } | null };
 
   if (error) {
-    console.error('updateUserRole:', error);
+    console.error('updateUserRole failed');
     return { success: false, error: 'Rolle konnte nicht aktualisiert werden.' };
   }
 
@@ -204,7 +208,7 @@ export async function resetUserPassword(
   });
 
   if (error) {
-    console.error('resetUserPassword:', error);
+    console.error('resetUserPassword failed');
     return { success: false, error: 'Passwort konnte nicht zurückgesetzt werden.' };
   }
 
@@ -227,7 +231,7 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
     .eq('org_id', ctx.membership.orgId)) as { error: { message: string } | null };
 
   if (memberError) {
-    console.error('deleteUser membership:', memberError);
+    console.error('deleteUser membership failed');
     return { success: false, error: 'Nutzer konnte nicht entfernt werden.' };
   }
 
@@ -236,7 +240,7 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
   const { error: authError } = await serviceClient.auth.admin.deleteUser(userId);
 
   if (authError) {
-    console.error('deleteUser auth:', authError);
+    console.error('deleteUser auth failed');
     return { success: false, error: 'Auth-Konto konnte nicht gelöscht werden.' };
   }
 
@@ -257,7 +261,7 @@ export async function getDepartments(): Promise<ActionResult<{ departments: (Dep
     .order('name')) as { data: Department[] | null; error: { message: string } | null };
 
   if (error) {
-    console.error('getDepartments:', error);
+    console.error('getDepartments failed');
     return { success: false, error: 'Abteilungen konnten nicht geladen werden.' };
   }
 
@@ -289,6 +293,9 @@ export async function createDepartment(name: string): Promise<ActionResult<{ id:
   if (!name.trim()) {
     return { success: false, error: 'Name darf nicht leer sein.' };
   }
+  if (name.length > 100) {
+    return { success: false, error: 'Name darf maximal 100 Zeichen lang sein.' };
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = (await (ctx.supabase.from('departments') as any)
@@ -297,7 +304,7 @@ export async function createDepartment(name: string): Promise<ActionResult<{ id:
     .single()) as { data: { id: string } | null; error: { message: string } | null };
 
   if (error || !data) {
-    console.error('createDepartment:', error);
+    console.error('createDepartment failed');
     return { success: false, error: 'Abteilung konnte nicht erstellt werden.' };
   }
 
@@ -320,7 +327,7 @@ export async function updateDepartment(id: string, name: string): Promise<Action
     .eq('org_id', ctx.membership.orgId)) as { error: { message: string } | null };
 
   if (error) {
-    console.error('updateDepartment:', error);
+    console.error('updateDepartment failed');
     return { success: false, error: 'Abteilung konnte nicht aktualisiert werden.' };
   }
 
@@ -350,7 +357,7 @@ export async function deleteDepartment(id: string): Promise<ActionResult> {
     .eq('org_id', ctx.membership.orgId)) as { error: { message: string } | null };
 
   if (error) {
-    console.error('deleteDepartment:', error);
+    console.error('deleteDepartment failed');
     return { success: false, error: 'Abteilung konnte nicht gelöscht werden.' };
   }
 

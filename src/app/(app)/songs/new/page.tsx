@@ -1,13 +1,19 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { createServerClient } from '@/lib/supabase/server';
+import { getUserMembership } from '@/lib/supabase/auth-helpers';
 import { SongEditorForm } from '@/components/songs/SongEditorForm';
 
 export const metadata: Metadata = {
   title: 'Neuer Song – Songbook',
 };
 
-export default function NewSongPage() {
+export default async function NewSongPage() {
+  const supabase = await createServerClient();
+  const membership = await getUserMembership(supabase);
+  if (!membership || membership.role !== 'admin') redirect('/songs');
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
       <Link

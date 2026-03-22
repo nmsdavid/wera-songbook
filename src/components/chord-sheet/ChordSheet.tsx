@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 import { Button } from '@/components/ui/button';
 import { parseChordPro, transposeSong, renderToHtml } from '@/lib/chordpro';
 
@@ -17,7 +18,7 @@ export function ChordSheet({ content, originalKey }: ChordSheetProps) {
   const { html, currentKey } = useMemo(() => {
     const transposed = transposeSong(baseSong, transposeOffset);
     return {
-      html: renderToHtml(transposed),
+      html: DOMPurify.sanitize(renderToHtml(transposed)),
       currentKey: transposed.key ?? originalKey ?? null,
     };
   }, [baseSong, transposeOffset, originalKey]);

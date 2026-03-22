@@ -39,6 +39,6 @@ export async function syncUpcomingSetlists() {
 
     await setMeta('lastSync', new Date().toISOString());
   } catch (error) {
-    console.error('Offline sync failed:', error);
+    console.error('Offline sync failed');
   }
 }

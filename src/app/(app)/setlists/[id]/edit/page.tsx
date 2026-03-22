@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { createServerClient } from '@/lib/supabase/server';
+import { getUserMembership } from '@/lib/supabase/auth-helpers';
 import { getSetlistWithSongs } from '@/lib/setlists/actions';
 import { SetlistEditorForm } from '@/components/setlist/SetlistEditorForm';
 
@@ -17,6 +20,10 @@ export async function generateMetadata({ params }: EditSetlistPageProps): Promis
 }
 
 export default async function EditSetlistPage({ params }: EditSetlistPageProps) {
+  const supabase = await createServerClient();
+  const membership = await getUserMembership(supabase);
+  if (!membership || (membership.role !== 'admin' && membership.role !== 'leader')) redirect('/setlists');
+
   const { id } = await params;
   const data = await getSetlistWithSongs(id);
 

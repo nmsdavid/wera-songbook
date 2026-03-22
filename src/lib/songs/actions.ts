@@ -23,7 +23,10 @@ export type SongFormData = {
 
 function validateSongForm(data: SongFormData): string | null {
   if (!data.title.trim()) return 'Titel darf nicht leer sein.';
+  if (data.title.length > 200) return 'Titel darf maximal 200 Zeichen lang sein.';
   if (!data.content.trim()) return 'Song-Inhalt (ChordPro) darf nicht leer sein.';
+  if (data.content.length > 50000) return 'Song-Inhalt ist zu lang (max. 50.000 Zeichen).';
+  if (data.artist && data.artist.length > 200) return 'Interpret darf maximal 200 Zeichen lang sein.';
   if (data.tempo !== null && (data.tempo < 1 || data.tempo > 300)) {
     return 'Tempo muss zwischen 1 und 300 BPM liegen.';
   }
@@ -61,7 +64,7 @@ export async function createSong(
     .single()) as { data: { id: string } | null; error: { message: string; code: string } | null };
 
   if (error || !data) {
-    console.error('createSong error:', error);
+    console.error('createSong failed');
     return { success: false, error: 'Song konnte nicht erstellt werden.' };
   }
 
@@ -78,9 +81,10 @@ export async function updateSong(
   if (validationError) return { success: false, error: validationError };
 
   const supabase = await createServerClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Nicht angemeldet.' };
+  const membership = await getUserMembership(supabase);
+  if (!membership || membership.role !== 'admin') {
+    return { success: false, error: 'Keine Berechtigung.' };
+  }
 
   // Optimistic concurrency: only update if version matches
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,7 +99,7 @@ export async function updateSong(
       content: formData.content,
       department_id: formData.department_id,
       version: version + 1,
-      updated_by: user.id,
+      updated_by: membership.userId,
     })
     .eq('id', songId)
     .eq('version', version)
@@ -106,7 +110,7 @@ export async function updateSong(
     if (error.code === 'PGRST116') {
       return { success: false, error: 'CONFLICT' };
     }
-    console.error('updateSong error:', error);
+    console.error('updateSong failed');
     return { success: false, error: 'Song konnte nicht gespeichert werden.' };
   }
 
@@ -121,9 +125,10 @@ export async function updateSong(
 
 export async function deleteSong(songId: string): Promise<ActionResult> {
   const supabase = await createServerClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Nicht angemeldet.' };
+  const membership = await getUserMembership(supabase);
+  if (!membership || membership.role !== 'admin') {
+    return { success: false, error: 'Keine Berechtigung.' };
+  }
 
   const { error } = await supabase
     .from('songs')
@@ -131,7 +136,7 @@ export async function deleteSong(songId: string): Promise<ActionResult> {
     .eq('id', songId);
 
   if (error) {
-    console.error('deleteSong error:', error);
+    console.error('deleteSong failed');
     return { success: false, error: 'Song konnte nicht gelöscht werden.' };
   }
 

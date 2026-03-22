@@ -41,6 +41,7 @@ export type SetlistSongWithDetails = {
 
 function validateSetlistForm(data: SetlistFormData): string | null {
   if (!data.title.trim()) return 'Titel darf nicht leer sein.';
+  if (data.title.length > 200) return 'Titel darf maximal 200 Zeichen lang sein.';
   if (!data.date) return 'Datum ist erforderlich.';
   return null;
 }
@@ -71,7 +72,7 @@ export async function createSetlist(
     .single()) as { data: { id: string } | null; error: { message: string; code: string } | null };
 
   if (error || !data) {
-    console.error('createSetlist error:', error);
+    console.error('createSetlist failed');
     return { success: false, error: 'Setlist konnte nicht erstellt werden.' };
   }
 
@@ -87,6 +88,10 @@ export async function updateSetlist(
   if (validationError) return { success: false, error: validationError };
 
   const supabase = await createServerClient();
+  const membership = await getUserMembership(supabase);
+  if (!membership || (membership.role !== 'admin' && membership.role !== 'leader')) {
+    return { success: false, error: 'Keine Berechtigung.' };
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = (await (supabase.from('setlists') as any)
@@ -98,7 +103,7 @@ export async function updateSetlist(
     .eq('id', setlistId)) as { error: { message: string } | null };
 
   if (error) {
-    console.error('updateSetlist error:', error);
+    console.error('updateSetlist failed');
     return { success: false, error: 'Setlist konnte nicht gespeichert werden.' };
   }
 
@@ -109,6 +114,10 @@ export async function updateSetlist(
 
 export async function deleteSetlist(setlistId: string): Promise<ActionResult> {
   const supabase = await createServerClient();
+  const membership = await getUserMembership(supabase);
+  if (!membership || membership.role !== 'admin') {
+    return { success: false, error: 'Keine Berechtigung.' };
+  }
 
   const { error } = await supabase
     .from('setlists')
@@ -116,7 +125,7 @@ export async function deleteSetlist(setlistId: string): Promise<ActionResult> {
     .eq('id', setlistId);
 
   if (error) {
-    console.error('deleteSetlist error:', error);
+    console.error('deleteSetlist failed');
     return { success: false, error: 'Setlist konnte nicht gelöscht werden.' };
   }
 
@@ -126,6 +135,10 @@ export async function deleteSetlist(setlistId: string): Promise<ActionResult> {
 
 export async function publishSetlist(setlistId: string): Promise<ActionResult> {
   const supabase = await createServerClient();
+  const membership = await getUserMembership(supabase);
+  if (!membership || membership.role !== 'admin') {
+    return { success: false, error: 'Keine Berechtigung.' };
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = (await (supabase.from('setlists') as any)
@@ -133,7 +146,7 @@ export async function publishSetlist(setlistId: string): Promise<ActionResult> {
     .eq('id', setlistId)) as { error: { message: string } | null };
 
   if (error) {
-    console.error('publishSetlist error:', error);
+    console.error('publishSetlist failed');
     return { success: false, error: 'Setlist konnte nicht veröffentlicht werden.' };
   }
 
@@ -149,6 +162,10 @@ export async function updateSetlistSongs(
   songs: SetlistSongEntry[],
 ): Promise<ActionResult> {
   const supabase = await createServerClient();
+  const membership = await getUserMembership(supabase);
+  if (!membership || (membership.role !== 'admin' && membership.role !== 'leader')) {
+    return { success: false, error: 'Keine Berechtigung.' };
+  }
 
   const { error: deleteError } = await supabase
     .from('setlist_songs')
@@ -156,7 +173,7 @@ export async function updateSetlistSongs(
     .eq('setlist_id', setlistId);
 
   if (deleteError) {
-    console.error('updateSetlistSongs delete error:', deleteError);
+    console.error('updateSetlistSongs delete failed');
     return { success: false, error: 'Songs konnten nicht aktualisiert werden.' };
   }
 
@@ -173,7 +190,7 @@ export async function updateSetlistSongs(
       .insert(rows)) as { error: { message: string } | null };
 
     if (insertError) {
-      console.error('updateSetlistSongs insert error:', insertError);
+      console.error('updateSetlistSongs insert failed');
       return { success: false, error: 'Songs konnten nicht aktualisiert werden.' };
     }
   }
