@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,13 @@ export function LoginForm() {
               'Anmelden'
             )}
           </Button>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Noch kein Konto?{' '}
+            <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
+              Registrieren
+            </Link>
+          </p>
         </form>
       </CardContent>
     </Card>

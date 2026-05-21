@@ -28,6 +28,13 @@ export type CreateUserInput = {
   departmentId: string;
 };
 
+export type PendingUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  created_at: string;
+};
+
 // ── Helpers ────────────────────────────────────────────
 
 async function requireAdmin() {
@@ -242,6 +249,130 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
   if (authError) {
     console.error('deleteUser auth failed');
     return { success: false, error: 'Auth-Konto konnte nicht gelöscht werden.' };
+  }
+
+  revalidatePath('/admin');
+  return { success: true };
+}
+
+// ── Registrierungs-Anfragen (Freigabe) ─────────────────
+
+/**
+ * Pending users: authenticated accounts that have signed up but do not yet
+ * have an org_members row (i.e. not yet approved by an admin).
+ */
+export async function getPendingUsers(): Promise<ActionResult<{ users: PendingUser[] }>> {
+  const ctx = await requireAdmin();
+  if (!ctx) return { success: false, error: 'Keine Berechtigung.' };
+
+  const serviceClient = await createServiceRoleClient();
+
+  const { data: authData, error: authError } = await serviceClient.auth.admin.listUsers();
+  if (authError || !authData) {
+    console.error('getPendingUsers list failed');
+    return { success: false, error: 'Anfragen konnten nicht geladen werden.' };
+  }
+
+  // Any membership counts as "approved" – use service role to see all orgs.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: members } = (await (serviceClient.from('org_members') as any)
+    .select('user_id')) as { data: Array<{ user_id: string }> | null };
+
+  const memberIds = new Set((members ?? []).map(m => m.user_id));
+
+  const users: PendingUser[] = authData.users
+    .filter(u => !memberIds.has(u.id))
+    .map(u => ({
+      id: u.id,
+      email: u.email ?? '',
+      displayName: (u.user_metadata?.display_name as string | undefined) ?? '',
+      created_at: u.created_at,
+    }))
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+  return { success: true, data: { users } };
+}
+
+export async function approveUser(
+  userId: string,
+  role: AppRole,
+  departmentId: string,
+): Promise<ActionResult> {
+  const ctx = await requireAdmin();
+  if (!ctx) return { success: false, error: 'Keine Berechtigung.' };
+
+  if (!departmentId) {
+    return { success: false, error: 'Bitte eine Abteilung wählen.' };
+  }
+
+  // Department must belong to the admin's org (RLS-scoped client).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: dept } = (await (ctx.supabase.from('departments') as any)
+    .select('id')
+    .eq('id', departmentId)
+    .eq('org_id', ctx.membership.orgId)
+    .limit(1)) as { data: Array<{ id: string }> | null };
+
+  if (!dept?.[0]) {
+    return { success: false, error: 'Ungültige Abteilung.' };
+  }
+
+  const serviceClient = await createServiceRoleClient();
+
+  // Already approved?
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = (await (serviceClient.from('org_members') as any)
+    .select('id')
+    .eq('user_id', userId)
+    .limit(1)) as { data: Array<{ id: string }> | null };
+
+  if (existing?.[0]) {
+    return { success: false, error: 'Nutzer ist bereits freigegeben.' };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = (await (serviceClient.from('org_members') as any)
+    .insert({
+      org_id: ctx.membership.orgId,
+      department_id: departmentId,
+      user_id: userId,
+      role,
+    })) as { error: { message: string } | null };
+
+  if (error) {
+    console.error('approveUser failed');
+    return { success: false, error: 'Freigabe fehlgeschlagen.' };
+  }
+
+  revalidatePath('/admin');
+  return { success: true };
+}
+
+export async function rejectUser(userId: string): Promise<ActionResult> {
+  const ctx = await requireAdmin();
+  if (!ctx) return { success: false, error: 'Keine Berechtigung.' };
+
+  if (userId === ctx.membership.userId) {
+    return { success: false, error: 'Du kannst dich nicht selbst ablehnen.' };
+  }
+
+  const serviceClient = await createServiceRoleClient();
+
+  // Safety: only delete accounts that are still pending (no membership).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = (await (serviceClient.from('org_members') as any)
+    .select('id')
+    .eq('user_id', userId)
+    .limit(1)) as { data: Array<{ id: string }> | null };
+
+  if (existing?.[0]) {
+    return { success: false, error: 'Nutzer ist bereits Mitglied. Bitte über die Nutzerliste entfernen.' };
+  }
+
+  const { error } = await serviceClient.auth.admin.deleteUser(userId);
+  if (error) {
+    console.error('rejectUser failed');
+    return { success: false, error: 'Ablehnen fehlgeschlagen.' };
   }
 
   revalidatePath('/admin');
