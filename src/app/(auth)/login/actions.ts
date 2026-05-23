@@ -37,3 +37,9 @@ export async function login(
 
   redirect('/songs');
 }
+
+export async function logout(): Promise<void> {
+  const supabase = await createServerClient();
+  await supabase.auth.signOut();
+  redirect('/login');
+}

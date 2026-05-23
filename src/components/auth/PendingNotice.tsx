@@ -1,8 +1,4 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
 import { Clock, LogOut } from 'lucide-react';
-import { createBrowserClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,16 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { logout } from '@/app/(auth)/login/actions';
 
 export function PendingNotice() {
-  const router = useRouter();
-
-  async function handleSignOut() {
-    const supabase = createBrowserClient();
-    await supabase.auth.signOut();
-    router.push('/login');
-  }
-
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="space-y-2 text-center">
@@ -34,14 +23,16 @@ export function PendingNotice() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button
-          variant="outline"
-          className="w-full min-h-[48px]"
-          onClick={handleSignOut}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Abmelden
-        </Button>
+        <form action={logout}>
+          <Button
+            type="submit"
+            variant="outline"
+            className="w-full min-h-[48px]"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Abmelden
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

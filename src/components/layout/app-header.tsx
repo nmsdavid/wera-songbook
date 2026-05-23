@@ -1,8 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { LogOut, User } from 'lucide-react';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { logout } from '@/app/(auth)/login/actions';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -29,14 +28,6 @@ const roleLabels: Record<AppRole, string> = {
 };
 
 export function AppHeader({ user, role, isAdmin }: AppHeaderProps) {
-  const router = useRouter();
-
-  async function handleSignOut() {
-    const supabase = createBrowserClient();
-    await supabase.auth.signOut();
-    router.push('/login');
-  }
-
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
       <div className="flex h-14 items-center gap-2 px-4">
@@ -63,10 +54,18 @@ export function AppHeader({ user, role, isAdmin }: AppHeaderProps) {
                 )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="min-h-[48px]">
-                <LogOut className="mr-2 h-4 w-4" />
-                Abmelden
-              </DropdownMenuItem>
+              <form action={logout}>
+                <DropdownMenuItem
+                  asChild
+                  onSelect={(e) => e.preventDefault()}
+                  className="min-h-[48px]"
+                >
+                  <button type="submit" className="w-full cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Abmelden
+                  </button>
+                </DropdownMenuItem>
+              </form>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
