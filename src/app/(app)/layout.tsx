@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getUserMembership } from '@/lib/supabase/auth-helpers';
 import { AppShell } from '@/components/layout/app-shell';
+import type { UserRoleState } from '@/hooks/use-user-role';
 
 export default async function AppLayout({
   children,
@@ -14,5 +15,15 @@ export default async function AppLayout({
     redirect('/pending');
   }
 
-  return <AppShell>{children}</AppShell>;
+  // Authoritative role for the whole client tree (see useUserRole).
+  const userRole: UserRoleState = {
+    userId: membership.userId,
+    email: membership.email ?? null,
+    role: membership.role,
+    isAdmin: membership.role === 'admin',
+    isLeader: membership.role === 'leader',
+    loading: false,
+  };
+
+  return <AppShell userRole={userRole}>{children}</AppShell>;
 }

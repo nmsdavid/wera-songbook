@@ -5,45 +5,45 @@ import { AppHeader } from '@/components/layout/app-header';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { OfflineBanner } from '@/components/layout/offline-banner';
-import { useUserRole } from '@/hooks/use-user-role';
+import { UserRoleProvider, type UserRoleState } from '@/hooks/use-user-role';
 import { syncUpcomingSetlists } from '@/lib/offline/sync';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, role, isAdmin, loading } = useUserRole();
-
+export function AppShell({
+  userRole,
+  children,
+}: {
+  userRole: UserRoleState;
+  children: React.ReactNode;
+}) {
   useEffect(() => {
-    if (!loading && user) {
-      syncUpcomingSetlists();
-    }
-  }, [loading, user]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-svh items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+    syncUpcomingSetlists();
+  }, []);
 
   return (
-    <div className="min-h-svh bg-background">
-      <OfflineBanner />
-      <AppHeader user={user} role={role} isAdmin={isAdmin} />
+    <UserRoleProvider value={userRole}>
+      <div className="min-h-svh bg-background">
+        <OfflineBanner />
+        <AppHeader
+          email={userRole.email}
+          role={userRole.role}
+          isAdmin={userRole.isAdmin}
+        />
 
-      <div className="flex">
-        {/* Desktop sidebar */}
-        <aside className="hidden lg:flex lg:w-56 lg:shrink-0 lg:flex-col lg:border-r">
-          <SidebarNav isAdmin={isAdmin} />
-        </aside>
+        <div className="flex">
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:flex lg:w-56 lg:shrink-0 lg:flex-col lg:border-r">
+            <SidebarNav isAdmin={userRole.isAdmin} />
+          </aside>
 
-        {/* Main content */}
-        <main className="flex-1 pb-16 lg:pb-0">
-          {children}
-        </main>
+          {/* Main content */}
+          <main className="flex-1 pb-16 lg:pb-0">
+            {children}
+          </main>
+        </div>
+
+        {/* Mobile bottom nav */}
+        <BottomNav isAdmin={userRole.isAdmin} />
       </div>
-
-      {/* Mobile bottom nav */}
-      <BottomNav isAdmin={isAdmin} />
-    </div>
+    </UserRoleProvider>
   );
 }

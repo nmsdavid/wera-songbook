@@ -1,6 +1,7 @@
 'use client';
 
-import { LogOut, User } from 'lucide-react';
+import Link from 'next/link';
+import { LogOut, Settings, User } from 'lucide-react';
 import { logout } from '@/app/(auth)/login/actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,10 +14,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MobileNavSheet } from './mobile-nav-sheet';
 import type { AppRole } from '@/types/database';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 type AppHeaderProps = {
-  user: SupabaseUser | null;
+  email: string | null;
   role: AppRole | null;
   isAdmin: boolean;
 };
@@ -27,7 +27,7 @@ const roleLabels: Record<AppRole, string> = {
   member: 'Mitglied',
 };
 
-export function AppHeader({ user, role, isAdmin }: AppHeaderProps) {
+export function AppHeader({ email, role, isAdmin }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
       <div className="flex h-14 items-center gap-2 px-4">
@@ -45,7 +45,7 @@ export function AppHeader({ user, role, isAdmin }: AppHeaderProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <p className="text-sm font-medium truncate">
-                  {user?.email ?? 'Unbekannt'}
+                  {email ?? 'Unbekannt'}
                 </p>
                 {role && (
                   <p className="text-xs text-muted-foreground">
@@ -54,6 +54,14 @@ export function AppHeader({ user, role, isAdmin }: AppHeaderProps) {
                 )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {isAdmin && (
+                <DropdownMenuItem asChild className="min-h-[48px]">
+                  <Link href="/admin">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Verwaltung
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <form action={logout}>
                 <DropdownMenuItem
                   asChild
