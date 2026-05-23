@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Loader2, MoreVertical, KeyRound, Trash2, UserCog } from 'lucide-react';
+import { Ban, Loader2, MoreVertical, KeyRound, Trash2, UserCog } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  blockUser,
   deleteUser,
   resetUserPassword,
   updateUserRole,
@@ -63,8 +65,10 @@ const ROLE_COLORS: Record<AppRole, string> = {
 };
 
 export function UserList({ users, departments, currentUserId }: UserListProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<UserWithMembership | null>(null);
+  const [blockTarget, setBlockTarget] = useState<UserWithMembership | null>(null);
   const [editTarget, setEditTarget] = useState<UserWithMembership | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<UserWithMembership | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -83,10 +87,25 @@ export function UserList({ users, departments, currentUserId }: UserListProps) {
       const result = await deleteUser(deleteTarget.id);
       if (result.success) {
         toast.success('Nutzer gelöscht');
+        router.refresh();
       } else {
         toast.error(result.error);
       }
       setDeleteTarget(null);
+    });
+  }
+
+  function handleBlock() {
+    if (!blockTarget) return;
+    startTransition(async () => {
+      const result = await blockUser(blockTarget.id);
+      if (result.success) {
+        toast.success('Nutzer gesperrt – steht jetzt unter „Freigaben".');
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+      setBlockTarget(null);
     });
   }
 
@@ -96,6 +115,7 @@ export function UserList({ users, departments, currentUserId }: UserListProps) {
       const result = await updateUserRole(editTarget.id, editRole, editDepartment);
       if (result.success) {
         toast.success('Nutzer aktualisiert');
+        router.refresh();
       } else {
         toast.error(result.error);
       }
@@ -160,6 +180,10 @@ export function UserList({ users, departments, currentUserId }: UserListProps) {
                     <KeyRound className="mr-2 h-4 w-4" />
                     Passwort zurücksetzen
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setBlockTarget(user)}>
+                    <Ban className="mr-2 h-4 w-4" />
+                    Sperren
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
                     onClick={() => setDeleteTarget(user)}
@@ -189,6 +213,27 @@ export function UserList({ users, departments, currentUserId }: UserListProps) {
             <AlertDialogAction onClick={handleDelete} disabled={isPending}>
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Block Confirmation */}
+      <AlertDialog open={!!blockTarget} onOpenChange={() => setBlockTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nutzer sperren?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {blockTarget?.email} verliert den Zugriff und landet wieder unter
+              „Freigaben". Das Konto bleibt erhalten – du kannst den Nutzer dort
+              jederzeit wieder freigeben.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBlock} disabled={isPending}>
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Sperren
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -255,6 +255,31 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
   return { success: true };
 }
 
+export async function blockUser(userId: string): Promise<ActionResult> {
+  const ctx = await requireAdmin();
+  if (!ctx) return { success: false, error: 'Keine Berechtigung.' };
+
+  if (userId === ctx.membership.userId) {
+    return { success: false, error: 'Du kannst dich nicht selbst sperren.' };
+  }
+
+  // Remove the membership → the user reverts to "pending" (locked out until an
+  // admin approves them again). The auth account is kept.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = (await (ctx.supabase.from('org_members') as any)
+    .delete()
+    .eq('user_id', userId)
+    .eq('org_id', ctx.membership.orgId)) as { error: { message: string } | null };
+
+  if (error) {
+    console.error('blockUser failed');
+    return { success: false, error: 'Nutzer konnte nicht gesperrt werden.' };
+  }
+
+  revalidatePath('/admin');
+  return { success: true };
+}
+
 // ── Registrierungs-Anfragen (Freigabe) ─────────────────
 
 /**
