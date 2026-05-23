@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Check, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ function formatDate(iso: string) {
 }
 
 export function PendingList({ users, departments }: PendingListProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [approveTarget, setApproveTarget] = useState<PendingUser | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PendingUser | null>(null);
@@ -75,6 +77,7 @@ export function PendingList({ users, departments }: PendingListProps) {
       if (result.success) {
         toast.success('Nutzer freigegeben');
         setApproveTarget(null);
+        router.refresh();
       } else {
         toast.error(result.error);
       }
@@ -87,6 +90,7 @@ export function PendingList({ users, departments }: PendingListProps) {
       const result = await rejectUser(rejectTarget.id);
       if (result.success) {
         toast.success('Anfrage abgelehnt');
+        router.refresh();
       } else {
         toast.error(result.error);
       }
