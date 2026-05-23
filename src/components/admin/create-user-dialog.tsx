@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
 };
 
 export function CreateUserDialog({ departments }: CreateUserDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState('');
@@ -69,6 +71,7 @@ export function CreateUserDialog({ departments }: CreateUserDialogProps) {
         toast.success('Nutzer erstellt');
         resetForm();
         setOpen(false);
+        router.refresh();
       } else {
         toast.error(result.error);
       }
