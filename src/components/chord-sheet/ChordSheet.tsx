@@ -13,7 +13,14 @@ interface ChordSheetProps {
 export function ChordSheet({ content, originalKey }: ChordSheetProps) {
   const [transposeOffset, setTransposeOffset] = useState(0);
 
-  const baseSong = useMemo(() => parseChordPro(content), [content]);
+  const baseSong = useMemo(() => {
+    // If the song has no {key: …} directive, seed it from the form's Tonart so
+    // chordsheetjs knows the key and updates the displayed key when transposing.
+    const hasKeyDirective = /\{\s*key\s*:/i.test(content);
+    const seeded =
+      originalKey && !hasKeyDirective ? `{key: ${originalKey}}\n${content}` : content;
+    return parseChordPro(seeded);
+  }, [content, originalKey]);
 
   const { html, currentKey } = useMemo(() => {
     const transposed = transposeSong(baseSong, transposeOffset);

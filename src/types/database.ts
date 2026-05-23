@@ -2,7 +2,7 @@
 // Keep in sync with supabase/migrations/.
 
 export type AppRole = 'admin' | 'leader' | 'member';
-export type SongCategory = 'Lobpreis' | 'Anbetung' | 'Rock' | 'Pop' | 'Ballade' | 'Sonstiges';
+export type SongCategory = 'Lobpreis' | 'Anbetung' | 'Sonstiges';
 export type EventType = 'Sonntag' | 'Montag' | 'Event';
 export type ResourceType = 'spotify' | 'youtube' | 'other';
 

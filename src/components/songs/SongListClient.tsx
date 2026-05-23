@@ -7,14 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SongCard } from '@/components/songs/SongCard';
 import type { SongCategory, SongListItem } from '@/types/database';
 
-const CATEGORIES: SongCategory[] = [
-  'Lobpreis',
-  'Anbetung',
-  'Rock',
-  'Pop',
-  'Ballade',
-  'Sonstiges',
-];
+const CATEGORIES: SongCategory[] = ['Lobpreis', 'Anbetung', 'Sonstiges'];
 
 interface SongListClientProps {
   songs: SongListItem[];

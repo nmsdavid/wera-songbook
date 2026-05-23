@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,14 +25,20 @@ import { createSong, updateSong, deleteSong } from '@/lib/songs/actions';
 import type { SongFormData } from '@/lib/songs/actions';
 import type { Song, SongCategory } from '@/types/database';
 
-const CATEGORIES: SongCategory[] = [
-  'Lobpreis', 'Anbetung', 'Rock', 'Pop', 'Ballade', 'Sonstiges',
+const CATEGORIES: SongCategory[] = ['Lobpreis', 'Anbetung', 'Sonstiges'];
+
+// Suggested tags (genre, themes, …). Users can add their own via the input.
+const AVAILABLE_TAGS = [
+  'Rock', 'Pop', 'Ballade', 'Modern', 'Klassisch',
+  'Heilung', 'Gebet', 'Wunder', 'Advent', 'Ostern', 'Pfingsten',
+  'Ernte', 'Glaube', 'Hoffnung', 'Freude',
 ];
 
-const AVAILABLE_TAGS = [
-  'Heilung', 'Gebet', 'Wunder', 'Advent', 'Ostern', 'Pfingsten',
-  'Ernte', 'Lobpreis', 'Anbetung', 'Glaube', 'Hoffnung', 'Freude',
-];
+function normalizeCategory(value: string | undefined): SongCategory {
+  return CATEGORIES.includes(value as SongCategory)
+    ? (value as SongCategory)
+    : 'Sonstiges';
+}
 
 interface SongEditorFormProps {
   song?: Song;
@@ -48,8 +54,10 @@ export function SongEditorForm({ song, mode }: SongEditorFormProps) {
   const [artist, setArtist] = useState(song?.artist ?? '');
   const [originalKey, setOriginalKey] = useState(song?.original_key ?? '');
   const [tempo, setTempo] = useState(song?.tempo?.toString() ?? '');
-  const [category, setCategory] = useState<SongCategory>(song?.category ?? 'Sonstiges');
+  const [category, setCategory] = useState<SongCategory>(normalizeCategory(song?.category));
   const [tags, setTags] = useState<string[]>(song?.tags ?? []);
+  const [tagInput, setTagInput] = useState('');
+  const [tagError, setTagError] = useState('');
   const [content, setContent] = useState(song?.content ?? '');
   const [version, setVersion] = useState(song?.version ?? 1);
 
@@ -120,10 +128,21 @@ export function SongEditorForm({ song, mode }: SongEditorFormProps) {
     });
   }
 
-  function toggleTag(tag: string) {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
+  function addTag(raw: string) {
+    const tag = raw.trim();
+    if (!tag) return;
+    // Duplicate check (case-insensitive)
+    if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+      setTagError(`„${tag}" ist bereits vorhanden.`);
+      return;
+    }
+    setTags((prev) => [...prev, tag]);
+    setTagInput('');
+    setTagError('');
+  }
+
+  function removeTag(tag: string) {
+    setTags((prev) => prev.filter((t) => t !== tag));
   }
 
   async function handleConflictKeepMine() {
@@ -227,20 +246,68 @@ export function SongEditorForm({ song, mode }: SongEditorFormProps) {
       </div>
 
       {/* Tags */}
-      <div className="space-y-1.5">
-        <Label>Tags</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {AVAILABLE_TAGS.map((tag) => (
-            <Badge
-              key={tag}
-              variant={tags.includes(tag) ? 'default' : 'outline'}
-              className="cursor-pointer select-none"
-              onClick={() => toggleTag(tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
+      <div className="space-y-2">
+        <Label>Tags (Genre, Themen …)</Label>
+
+        {/* Selected tags */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {tags.map((tag) => (
+              <Badge key={tag} variant="default" className="select-none gap-1 pr-1">
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  aria-label={`${tag} entfernen`}
+                  className="rounded-full p-0.5 hover:bg-background/20"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Add custom tag */}
+        <div className="flex gap-2">
+          <Input
+            value={tagInput}
+            onChange={(e) => { setTagInput(e.target.value); setTagError(''); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); addTag(tagInput); }
+            }}
+            placeholder="Tag hinzufügen, z.B. Rock"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => addTag(tagInput)}
+            aria-label="Tag hinzufügen"
+            className="shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
+        {tagError && <p className="text-sm text-destructive">{tagError}</p>}
+
+        {/* Suggestions (not yet selected) */}
+        {AVAILABLE_TAGS.some((t) => !tags.some((x) => x.toLowerCase() === t.toLowerCase())) && (
+          <div className="flex flex-wrap gap-1.5">
+            {AVAILABLE_TAGS
+              .filter((t) => !tags.some((x) => x.toLowerCase() === t.toLowerCase()))
+              .map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="cursor-pointer select-none"
+                  onClick={() => addTag(tag)}
+                >
+                  + {tag}
+                </Badge>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* ChordPro content */}
@@ -254,6 +321,10 @@ export function SongEditorForm({ song, mode }: SongEditorFormProps) {
           className="min-h-[300px] font-mono text-sm"
         />
         {errors.content && <p className="text-sm text-destructive">{errors.content}</p>}
+        <p className="text-xs text-muted-foreground">
+          Akkorde in eckige Klammern direkt vor die Silbe setzen: <code className="font-mono">[G]Amazing [D]Grace</code>.
+          Tonart oben angeben (oder <code className="font-mono">{'{key: G}'}</code> im Text) – nur dann funktioniert das Transponieren.
+        </p>
       </div>
     </div>
   );
