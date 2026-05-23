@@ -1,14 +1,20 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Save, Loader2, Plus, X } from 'lucide-react';
+import { Save, Loader2, Plus, X, Music, Pilcrow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Select,
   SelectContent,
@@ -32,6 +38,11 @@ const AVAILABLE_TAGS = [
   'Rock', 'Pop', 'Ballade', 'Modern', 'Klassisch',
   'Heilung', 'Gebet', 'Wunder', 'Advent', 'Ostern', 'Pfingsten',
   'Ernte', 'Glaube', 'Hoffnung', 'Freude',
+];
+
+// Section labels for the "Abschnitt" button (inserted as {comment: …}).
+const SECTIONS = [
+  'Intro', 'Strophe', 'Pre-Chorus', 'Refrain', 'Bridge', 'Interlude', 'Outro',
 ];
 
 function normalizeCategory(value: string | undefined): SongCategory {
@@ -126,6 +137,37 @@ export function SongEditorForm({ song, mode }: SongEditorFormProps) {
         toast.error(result.error);
       }
     });
+  }
+
+  // Tracks the textarea the user last focused. formFields is rendered twice
+  // (desktop + mobile), so a single static ref would collide — track focus.
+  const activeTextarea = useRef<HTMLTextAreaElement | null>(null);
+
+  function insertIntoContent(snippet: string, caretOffsetFromStart?: number) {
+    const el = activeTextarea.current;
+    const start = el ? el.selectionStart : content.length;
+    const end = el ? el.selectionEnd : content.length;
+    setContent(content.slice(0, start) + snippet + content.slice(end));
+    setErrors((p) => ({ ...p, content: '' }));
+    const caret = start + (caretOffsetFromStart ?? snippet.length);
+    requestAnimationFrame(() => {
+      if (el) {
+        el.focus();
+        el.setSelectionRange(caret, caret);
+      }
+    });
+  }
+
+  function insertChord() {
+    // Insert empty brackets and place the caret between them to fill in.
+    insertIntoContent('[]', 1);
+  }
+
+  function insertSection(label: string) {
+    const el = activeTextarea.current;
+    const start = el ? el.selectionStart : content.length;
+    const needsNewline = start > 0 && content[start - 1] !== '\n';
+    insertIntoContent(`${needsNewline ? '\n' : ''}{comment: ${label}}\n`);
   }
 
   function addTag(raw: string) {
@@ -313,10 +355,40 @@ export function SongEditorForm({ song, mode }: SongEditorFormProps) {
       {/* ChordPro content */}
       <div className="space-y-1.5">
         <Label htmlFor="content">ChordPro *</Label>
+
+        {/* Insert helpers – no need to know the syntax */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={insertChord}
+          >
+            <Music className="mr-1.5 h-4 w-4" />
+            Akkord
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                <Pilcrow className="mr-1.5 h-4 w-4" />
+                Abschnitt
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {SECTIONS.map((section) => (
+                <DropdownMenuItem key={section} onClick={() => insertSection(section)}>
+                  {section}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <Textarea
           id="content"
           value={content}
           onChange={(e) => { setContent(e.target.value); setErrors((p) => ({ ...p, content: '' })); }}
+          onFocus={(e) => { activeTextarea.current = e.currentTarget; }}
           placeholder="{title: Mein Song}&#10;{key: G}&#10;&#10;[G]Amazing [D]Grace..."
           className="min-h-[300px] font-mono text-sm"
         />
