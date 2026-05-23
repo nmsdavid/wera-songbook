@@ -13,22 +13,25 @@ interface ChordSheetProps {
 export function ChordSheet({ content, originalKey }: ChordSheetProps) {
   const [transposeOffset, setTransposeOffset] = useState(0);
 
-  const baseSong = useMemo(() => {
-    // If the song has no {key: …} directive, seed it from the form's Tonart so
-    // chordsheetjs knows the key and updates the displayed key when transposing.
-    const hasKeyDirective = /\{\s*key\s*:/i.test(content);
-    const seeded =
-      originalKey && !hasKeyDirective ? `{key: ${originalKey}}\n${content}` : content;
-    return parseChordPro(seeded);
-  }, [content, originalKey]);
-
-  const { html, currentKey } = useMemo(() => {
-    const transposed = transposeSong(baseSong, transposeOffset);
-    return {
-      html: DOMPurify.sanitize(renderToHtml(transposed)),
-      currentKey: transposed.key ?? originalKey ?? null,
-    };
-  }, [baseSong, transposeOffset, originalKey]);
+  const { html, currentKey, parseError } = useMemo(() => {
+    try {
+      // If the song has no {key: …} directive, seed it from the form's Tonart so
+      // chordsheetjs knows the key and updates the displayed key on transpose.
+      const hasKeyDirective = /\{\s*key\s*:/i.test(content);
+      const seeded =
+        originalKey && !hasKeyDirective ? `{key: ${originalKey}}\n${content}` : content;
+      const transposed = transposeSong(parseChordPro(seeded), transposeOffset);
+      return {
+        html: DOMPurify.sanitize(renderToHtml(transposed)),
+        currentKey: transposed.key ?? originalKey ?? null,
+        parseError: false,
+      };
+    } catch {
+      // Invalid ChordPro (e.g. an unclosed "[" while typing). Never crash the
+      // app — show the raw text and a hint instead.
+      return { html: '', currentKey: originalKey ?? null, parseError: true };
+    }
+  }, [content, originalKey, transposeOffset]);
 
   return (
     <div className="space-y-4">
@@ -73,6 +76,17 @@ export function ChordSheet({ content, originalKey }: ChordSheetProps) {
       </div>
 
       {/* Chord sheet */}
+      {parseError ? (
+        <div className="space-y-2">
+          <p className="text-sm text-destructive">
+            Vorschau nicht verfügbar – prüfe die ChordPro-Syntax (z. B. eine nicht
+            geschlossene <code className="font-mono">[</code>-Klammer).
+          </p>
+          <pre className="whitespace-pre-wrap font-mono text-sm text-muted-foreground">
+            {content}
+          </pre>
+        </div>
+      ) : (
       <div
         className={[
           'chord-sheet-container',
@@ -96,6 +110,7 @@ export function ChordSheet({ content, originalKey }: ChordSheetProps) {
         ].join(' ')}
         dangerouslySetInnerHTML={{ __html: html }}
       />
+      )}
     </div>
   );
 }
