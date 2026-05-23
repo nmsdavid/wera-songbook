@@ -164,7 +164,9 @@ export function UserList({ users, departments, currentUserId }: UserListProps) {
                 </span>
               </div>
             </div>
-            {user.id !== currentUserId && (
+            {(() => {
+              const isSelf = user.id === currentUserId;
+              return (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="min-h-[48px] min-w-[48px]">
@@ -172,28 +174,35 @@ export function UserList({ users, departments, currentUserId }: UserListProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openEdit(user)}>
-                    <UserCog className="mr-2 h-4 w-4" />
-                    Rolle / Abteilung ändern
-                  </DropdownMenuItem>
+                  {!isSelf && (
+                    <DropdownMenuItem onClick={() => openEdit(user)}>
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Rolle / Abteilung ändern
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => { setPasswordTarget(user); setNewPassword(''); }}>
                     <KeyRound className="mr-2 h-4 w-4" />
-                    Passwort zurücksetzen
+                    {isSelf ? 'Eigenes Passwort ändern' : 'Passwort zurücksetzen'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setBlockTarget(user)}>
-                    <Ban className="mr-2 h-4 w-4" />
-                    Sperren
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => setDeleteTarget(user)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Nutzer löschen
-                  </DropdownMenuItem>
+                  {!isSelf && (
+                    <DropdownMenuItem onClick={() => setBlockTarget(user)}>
+                      <Ban className="mr-2 h-4 w-4" />
+                      Sperren
+                    </DropdownMenuItem>
+                  )}
+                  {!isSelf && (
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => setDeleteTarget(user)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Nutzer löschen
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
+              );
+            })()}
           </div>
         ))}
       </div>
